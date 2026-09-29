@@ -1,5 +1,5 @@
 const base = new URL(import.meta.url).pathname.replace(/assets\/app\.js$/, '');
-const zoneNames = { earth:'Земля', mars:'Марс', prime:'Прайм', phobos:'Фобос', moon:'Луна', space:'Открытый космос' };
+const zoneNames = { earth:'Земля', mars:'Марс', prime:'Прайм', venus:'Венера', phobos:'Фобос', moon:'Луна', space:'Открытый космос' };
 const views = ['earth','mars','prime','space'];
 const news = {
   earth:[['Лунный архив открыл новый раздел о первых экспедициях','moon'],['Объединённая Земля обновляет публичный каталог маршрутов','ue'],['Почему адреса .blue всё ещё встречаются в старой Сети','knowledge']],

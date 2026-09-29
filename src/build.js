@@ -5,6 +5,8 @@ import { microsites } from './microsites.js';
 import { renderMicrosite } from './render-microsite.js';
 import { renderOlympic } from './render-olympic.js';
 import { renderEarth } from './render-earth.js';
+import { forumCategories } from './forum.js';
+import { renderForum } from './render-forum.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root, 'src/content.json'), 'utf8'));
@@ -19,7 +21,7 @@ const absolute = p => `${origin}${url(p)}`;
 const bySlug = Object.fromEntries(sites.map(s => [s.slug, s]));
 const routeFor = s => `/${s.domain}/`;
 const link = s => url(routeFor(s));
-const zoneName = { earth:'Земля', mars:'Марс', prime:'Прайм', space:'Открытый космос', moon:'Луна', phobos:'Фобос' };
+const zoneName = { earth:'Земля', mars:'Марс', prime:'Прайм', venus:'Венера', space:'Открытый космос', moon:'Луна', phobos:'Фобос' };
 const glyph = {earth:'◉',mars:'●',prime:'✝',space:'✦'};
 const write = (name, html) => { const target=path.join(out,name); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.writeFileSync(target,html); };
 
@@ -35,7 +37,7 @@ write('index.html', shell({title:'Поиск по Солнечной систе�
 const searchBody = `<main class="inner-page"><div class="eyebrow">ПОИСК / ПУБЛИЧНЫЙ ИНДЕКС</div><h1>Результаты поиска</h1><form class="search-form inner-search" action="${url('/search/')}" method="get"><label class="sr-only" for="query">Поиск по Сети</label><span class="search-icon" aria-hidden="true">⌕</span><input id="query" name="q" type="search" placeholder="Название, адрес или место" required><button type="submit">НАЙТИ ↗</button></form><div class="filter-row"><span>ПРИОРИТЕТ ПОКАЗА:</span>${switches}</div><p id="search-status" class="search-status">Все узлы публичного индекса</p><div class="result-list" id="results">${sites.map(result).join('')}</div><noscript><p>Для поиска по словам включите JavaScript. Все страницы доступны по ссылкам выше и в <a href="${url('/directory/')}">каталоге</a>.</p></noscript></main>`;
 write('search/index.html',shell({title:'Поиск',description:'Поиск по публичному индексу сайтов вымышленной Сети Одной звезды.',route:'/search/',body:searchBody,script:true}));
 
-const zones = [ ['earth','Земля','.ue · .earth · .blue'],['mars','Марс','.x · .mars · .red · .dome · .oai'],['prime','Прайм','.prime · .church · .light · .farm'],['phobos','Фобос','.phobos'],['moon','Луна','.moon'],['space','Свободная Сеть','.xxx · .rum · .hyp · .pirate · .space · .comp · .ship · .base · .news'] ];
+const zones = [ ['earth','Земля','.ue · .earth · .blue'],['mars','Марс','.x · .mars · .red · .dome · .oai'],['venus','Венера','.venus'],['prime','Прайм','.prime · .church · .light · .farm'],['phobos','Фобос','.phobos'],['moon','Луна','.moon'],['space','Свободная Сеть','.xxx · .rum · .hyp · .pirate · .space · .comp · .ship · .base · .news'] ];
 const directoryBody = `<main class="inner-page"><div class="eyebrow">КАРТА СЕТИ / ПУБЛИЧНЫЕ АДРЕСА</div><h1>Каталог доменов</h1><p class="lead">Вымышленные домены работают как адреса внутри истории. Здесь у каждого узла есть постоянная страница, доступная в обычном интернете.</p><div class="directory-grid">${zones.map(([zone,name,tlds])=>`<section class="zone-card"><div class="zone-card-top"><span>${esc(name)}</span><span>↗</span></div><div class="tlds">${esc(tlds)}</div><div class="zone-links">${sites.filter(s=>s.zone===zone).map(s=>`<a href="${link(s)}">${esc(s.domain)} <span>↗</span></a>`).join('') || '<span class="muted">Ожидает первых сайтов</span>'}</div></section>`).join('')}</div><p class="directory-note">Зоны задают местонахождение и характер ресурса, но не ограничивают доступ. Поиск видит всю открытую Сеть и меняет порядок результатов в зависимости от выбранной точки обзора.</p></main>`;
 write('directory/index.html',shell({title:'Каталог доменов',description:'Зоны и сайты вымышленной Сети Одной звезды: Земля, Марс, Прайм, Луна, Фобос и независимые узлы.',route:'/directory/',body:directoryBody}));
 
@@ -43,6 +45,15 @@ for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
   const model=microsites[s.slug];
   if (!model) throw new Error(`Missing microsite model: ${s.slug}`);
   const helpers={url,absolute,link,bySlug,esc};
+  if (s.slug==='forum') {
+    write(`${s.domain}/index.html`,renderForum(s,null,null,'home',helpers));
+    for (const category of forumCategories) {
+      write(`${s.domain}/${category.slug}/index.html`,renderForum(s,category,null,'category',helpers));
+      for (const topic of category.topics) write(`${s.domain}/${category.slug}/${topic.slug}/index.html`,renderForum(s,category,topic,'thread',helpers));
+    }
+    for (const view of ['login','register']) write(`${s.domain}/${view}/index.html`,renderForum(s,null,null,view,helpers));
+    continue;
+  }
   const render=s.slug==='olympic'?renderOlympic:s.slug==='ue'?(site,model,page,helpers)=>renderEarth(site,model,page,helpers,news.find(n=>n.zone==='earth').items):renderMicrosite;
   write(`${s.domain}/index.html`,render(s,model,null,helpers));
   for (const page of model.pages) write(`${s.domain}/${page.slug}/index.html`,render(s,model,page,helpers));
@@ -68,11 +79,12 @@ for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
   }
 }
 for (const story of earthNews) searchEntries.push({slug:`ue/news/${story.slug}`,path:`/portal.ue/news/${story.slug}/`,domain:`portal.ue/news/${story.slug}`,zone:'earth',title:story.title,description:story.summary,tag:'Земля · новости'});
+for (const category of forumCategories) for (const topic of category.topics) searchEntries.push({slug:`forum/${category.slug}/${topic.slug}`,path:`/warandlove.venus/${category.slug}/${topic.slug}/`,domain:`warandlove.venus/${category.slug}/${topic.slug}`,zone:'venus',title:`${topic.title} — Форум «Война и Любовь на Венере»`,description:topic.posts[0].text,tag:`Венера · ${category.title}`});
 write('assets/search-index.json',JSON.stringify(searchEntries));
-const allRoutes=['/','/search/','/directory/','/about/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`/${s.domain}/${page.slug}/`)),...earthNews.map(story=>`/portal.ue/news/${story.slug}/`)];
+const allRoutes=['/','/search/','/directory/','/about/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`/${s.domain}/${page.slug}/`)),...earthNews.map(story=>`/portal.ue/news/${story.slug}/`),...forumCategories.flatMap(category=>category.topics.map(topic=>`/warandlove.venus/${category.slug}/${topic.slug}/`))];
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allRoutes.map(p=>`<url><loc>${absolute(p)}</loc></url>`).join('')}</urlset>`);
 write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
-for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css','earth.css','earth.js']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
+for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css','earth.css','earth.js','forum.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
 console.log(`Built ${allRoutes.length} pages in dist/`);
