@@ -27,6 +27,11 @@ for (const entry of index) {
   if (!fs.existsSync(path.join(dist,entry.path.slice(1),'index.html'))) throw new Error(`Search result has no page: ${entry.domain}`);
 }
 if (index.filter(entry=>`${entry.title} ${entry.description}`.toLowerCase().includes('зем')).length<2) throw new Error('Earth query needs both site and wiki results');
+const wikiEarth=fs.readFileSync(path.join(dist,'knowledge.wiki/earth/index.html'),'utf8');
+if (!wikiEarth.includes('/assets/wiki-article.css') || !wikiEarth.includes('Содержание статьи')) throw new Error('Earth wiki article layout is missing');
+for (const section of microsites.knowledge.pages.find(page=>page.slug==='earth').sections) {
+  if (!wikiEarth.includes(`<h2 id="${section.slug}">${section.title}</h2>`) || !wikiEarth.includes(`href="#${section.slug}"`)) throw new Error(`Earth wiki section missing: ${section.slug}`);
+}
 const olympic=fs.readFileSync(path.join(dist,'olympic.ship/index.html'),'utf8');
 for (const phrase of ['Дорога','Прайм','Гиперион','Сатурн','Невесомость','Марс','Сиама','Три президентских пентхауса','Дженна Реджис']) {
   if (!olympic.toLowerCase().includes(phrase.toLowerCase())) throw new Error(`Olympic landing is missing: ${phrase}`);
