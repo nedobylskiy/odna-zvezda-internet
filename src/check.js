@@ -32,6 +32,8 @@ if (!wikiEarth.includes('/assets/wiki-article.css') || !wikiEarth.includes('Со
 for (const section of microsites.knowledge.pages.find(page=>page.slug==='earth').sections) {
   if (!wikiEarth.includes(`<h2 id="${section.slug}">${section.title}</h2>`) || !wikiEarth.includes(`href="#${section.slug}"`)) throw new Error(`Earth wiki section missing: ${section.slug}`);
 }
+const wikiPluto=fs.readFileSync(path.join(dist,'knowledge.wiki/pluto/index.html'),'utf8');
+if (!wikiEarth.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !wikiPluto.includes('Плутонский спор') || !index.some(entry=>entry.path==='/knowledge.wiki/pluto/')) throw new Error('Pluto wiki article or Earth crosslink is missing');
 const olympic=fs.readFileSync(path.join(dist,'olympic.ship/index.html'),'utf8');
 for (const phrase of ['Дорога','Прайм','Гиперион','Сатурн','Невесомость','Марс','Сиама','Три президентских пентхауса','Дженна Реджис']) {
   if (!olympic.toLowerCase().includes(phrase.toLowerCase())) throw new Error(`Olympic landing is missing: ${phrase}`);
