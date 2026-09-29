@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { microsites } from './microsites.js';
 import { forumCategories } from './forum.js';
+import { marsTime } from '../assets/mars-clock.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root,'dist');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root,'src/content.json'),'utf8'));
@@ -32,6 +33,15 @@ for (const phrase of ['Дорога','Прайм','Гиперион','Сатур
 }
 const earth=fs.readFileSync(path.join(dist,'portal.ue/index.html'),'utf8');
 if (!earth.includes('population-count') || !earth.includes('/assets/earth.js')) throw new Error('Earth population counter is missing');
+for (const route of ['portal.ue','portal.ue/news','portal.ue/services','portal.ue/transit']) {
+  const html=fs.readFileSync(path.join(dist,`${route}/index.html`),'utf8');
+  if (!html.includes('ЦЕНТРАЛЬНОДЕМНОЕ ВРЕМЯ · UTC') || !html.includes('id="ue-utc-clock"') || !html.includes('/assets/earth.js')) throw new Error(`Earth clock missing on ${route}`);
+}
+for (const route of ['red.mars','red.mars/bulletin','red.mars/routes']) {
+  const html=fs.readFileSync(path.join(dist,`${route}/index.html`),'utf8');
+  if (!html.includes('id="mars-clock"') || !html.includes('/assets/mars-clock.js') || !html.includes('ВРЕМЯ НУЛЕВОГО МЕРИДИАНА')) throw new Error(`Mars clock missing on ${route}`);
+}
+if (marsTime(Date.parse('2000-01-06T00:00:00Z'),64.184).clock!=='23:59:39') throw new Error('Mars clock differs from NASA Mars24 benchmark');
 for (const story of earthNews) if (!earth.includes(`/portal.ue/news/${story.slug}/`)) throw new Error(`Earth homepage omits news: ${story.slug}`);
 for (const category of forumCategories) {
   if (category.topics[0]?.slug!=='rules') throw new Error(`Missing pinned forum rules: ${category.slug}`);
