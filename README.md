@@ -12,11 +12,11 @@ npm run check
 python3 -m http.server 8000 -d dist
 ```
 
-Для просмотра локально установите `basePath` в `src/config.json` равным `""`, соберите сайт и откройте `http://localhost:8000/`. Перед публикацией верните `"/odna-zvezda-internet"`.
+Для просмотра локально соберите сайт и откройте `http://localhost:8000/`. Все внутренние пути начинаются с корня домена.
 
 ## Публикация
 
-Workflow `.github/workflows/pages.yml` собирает `dist` и публикует его через GitHub Pages при push в `main`. В настройках репозитория выберите **Settings → Pages → Build and deployment → GitHub Actions**. Пока используется адрес `https://nedobylskiy.github.io/odna-zvezda-internet/`. Если подключите свой домен, обновите `origin` и `basePath` в `src/config.json` до публикации: например `"origin": "https://одна-звезда.рф", "basePath": ""`. Тогда canonical, sitemap и все внутренние ссылки будут указывать на новый адрес. Домен подключается отдельно в настройках Pages и DNS.
+Workflow `.github/workflows/pages.yml` собирает `dist` и публикует его через GitHub Pages при push в `main`. Публичный адрес в `src/config.json` — `https://одна-звезда.рф/`; он используется для canonical, sitemap и внутренних ссылок. Домен должен быть отдельно подключён в **Settings → Pages → Custom domain** и DNS. Источник публикации — **GitHub Actions**.
 
 ## Добавление узла
 
