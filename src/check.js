@@ -37,7 +37,20 @@ for (const category of forumCategories) {
   if (category.topics[0]?.slug!=='rules') throw new Error(`Missing pinned forum rules: ${category.slug}`);
   const html=fs.readFileSync(path.join(dist,`warandlove.venus/${category.slug}/index.html`),'utf8');
   for (const topic of category.topics) if (!html.includes(`/warandlove.venus/${category.slug}/${topic.slug}/`)) throw new Error(`Forum topic missing from ${category.slug}: ${topic.slug}`);
+  for (const topic of category.topics.filter(t=>t.archive)) {
+    const first=fs.readFileSync(path.join(dist,`warandlove.venus/${category.slug}/${topic.slug}/index.html`),'utf8');
+    if ((first.match(/class="bb-post(?: bb-post-deleted)?"/g)||[]).length!==10 || !first.includes('Сообщение удалено модератором') || !first.includes(`Страница 1 из ${topic.archive.pages}`)) throw new Error(`Forum archive opening is incomplete: ${topic.slug}`);
+    for (let n=2;n<=topic.archive.pages;n++) {
+      const route=`warandlove.venus/${category.slug}/${topic.slug}/page/${n}/`;
+      const unavailable=fs.readFileSync(path.join(dist,`${route}index.html`),'utf8');
+      if (!unavailable.includes('Ошибка загрузки архива') || !unavailable.includes('content="noindex"') || sitemap.includes(`/${route}`)) throw new Error(`Archive error page invalid: ${route}`);
+    }
+  }
 }
+const forumHome=fs.readFileSync(path.join(dist,'warandlove.venus/index.html'),'utf8');
+if (!forumHome.includes('Обсуждаем любимый сериал всей солнечной системой')) throw new Error('Forum banner copy is missing');
+const introductions=fs.readFileSync(path.join(dist,'warandlove.venus/other/hello/index.html'),'utf8');
+if (!introductions.includes('Я с Овертона.') || introductions.includes('Я с Венеры.')) throw new Error('Forum introduction uses the wrong location');
 for (const view of ['login','register']) {
   const html=fs.readFileSync(path.join(dist,`warandlove.venus/${view}/index.html`),'utf8');
   if (!html.includes('<fieldset disabled>') || !html.includes('Временные неполадки') || !html.includes('content="noindex"')) throw new Error(`Forum ${view} must be unavailable and excluded from search engines`);

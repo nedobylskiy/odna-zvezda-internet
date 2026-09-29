@@ -49,7 +49,10 @@ for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
     write(`${s.domain}/index.html`,renderForum(s,null,null,'home',helpers));
     for (const category of forumCategories) {
       write(`${s.domain}/${category.slug}/index.html`,renderForum(s,category,null,'category',helpers));
-      for (const topic of category.topics) write(`${s.domain}/${category.slug}/${topic.slug}/index.html`,renderForum(s,category,topic,'thread',helpers));
+      for (const topic of category.topics) {
+        write(`${s.domain}/${category.slug}/${topic.slug}/index.html`,renderForum(s,category,topic,'thread',helpers));
+        if (topic.archive) for (let page=2;page<=topic.archive.pages;page++) write(`${s.domain}/${category.slug}/${topic.slug}/page/${page}/index.html`,renderForum(s,category,topic,'unavailable',helpers,page));
+      }
     }
     for (const view of ['login','register']) write(`${s.domain}/${view}/index.html`,renderForum(s,null,null,view,helpers));
     continue;
