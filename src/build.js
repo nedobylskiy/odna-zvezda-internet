@@ -92,5 +92,5 @@ write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http:/
 write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
-for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css','earth.css','earth.js','mars-clock.js','forum.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
+for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css','earth.css','earth.js','earth-clock.js','mars-clock-v2.js','planet-clocks.css','forum.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
 console.log(`Built ${allRoutes.length} pages in dist/`);
