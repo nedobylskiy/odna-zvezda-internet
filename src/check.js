@@ -21,4 +21,8 @@ for (const entry of index) {
   if (!fs.existsSync(path.join(dist,entry.path.slice(1),'index.html'))) throw new Error(`Search result has no page: ${entry.domain}`);
 }
 if (index.filter(entry=>`${entry.title} ${entry.description}`.toLowerCase().includes('зем')).length<2) throw new Error('Earth query needs both site and wiki results');
+const olympic=fs.readFileSync(path.join(dist,'sites/olympic/index.html'),'utf8');
+for (const phrase of ['Дорога','Прайм','Гиперион','Сатурн','Невесомость','Марс','Сиама','Три президентских пентхауса','Дженна Реджис']) {
+  if (!olympic.toLowerCase().includes(phrase.toLowerCase())) throw new Error(`Olympic landing is missing: ${phrase}`);
+}
 console.log(`Checked ${pages.length} HTML pages, internal links and sitemap.`);

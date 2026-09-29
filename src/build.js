@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { microsites } from './microsites.js';
 import { renderMicrosite } from './render-microsite.js';
+import { renderOlympic } from './render-olympic.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root, 'src/content.json'), 'utf8'));
@@ -41,8 +42,9 @@ for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
   const model=microsites[s.slug];
   if (!model) throw new Error(`Missing microsite model: ${s.slug}`);
   const helpers={url,absolute,link,bySlug,esc};
-  write(`sites/${s.slug}/index.html`,renderMicrosite(s,model,null,helpers));
-  for (const page of model.pages) write(`sites/${s.slug}/${page.slug}/index.html`,renderMicrosite(s,model,page,helpers));
+  const render=s.slug==='olympic'?renderOlympic:renderMicrosite;
+  write(`sites/${s.slug}/index.html`,render(s,model,null,helpers));
+  for (const page of model.pages) write(`sites/${s.slug}/${page.slug}/index.html`,render(s,model,page,helpers));
 }
 const aboutBody = `<main class="inner-page"><div class="eyebrow">О ПРОЕКТЕ</div><h1>Интернет одной звезды</h1><p class="lead">Художественный сетевой слой вселенной «Одна звезда»: страницы, новости и поисковая система, увиденные глазами жителей разных уголков Солнечной системы.</p><div class="article-content"><p>Адреса вроде knowledge.wiki и thechurch.prime существуют внутри вымышленной Сети. В браузере они открываются по настоящим адресам этого сайта. Вы можете читать страницы напрямую, переходить по ссылкам и находить их через обычные поисковики.</p><p>Материалы портала — художественный вымысел. Стартовые записи служат каркасом для будущих историй и могут уточняться по мере развития вселенной.</p><p><a href="${url('/directory/')}">Открыть каталог сети ↗</a></p></div></main>`;
 write('about/index.html',shell({title:'О проекте',description:'Как устроена вымышленная Сеть Одной звезды и её каталог доменов.',route:'/about/',body:aboutBody}));
@@ -60,5 +62,5 @@ write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http:/
 write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
-for (const asset of ['style.css','app.js','favicon.svg','microsites.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
+for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
 console.log(`Built ${allRoutes.length} pages in dist/`);
