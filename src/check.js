@@ -34,6 +34,10 @@ for (const section of microsites.knowledge.pages.find(page=>page.slug==='earth')
 }
 const wikiPluto=fs.readFileSync(path.join(dist,'knowledge.wiki/pluto/index.html'),'utf8');
 if (!wikiEarth.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !wikiPluto.includes('Плутонский спор') || !index.some(entry=>entry.path==='/knowledge.wiki/pluto/')) throw new Error('Pluto wiki article or Earth crosslink is missing');
+const wikiTechnologies=fs.readFileSync(path.join(dist,'knowledge.wiki/technologies/index.html'),'utf8');
+const wikiEngine=fs.readFileSync(path.join(dist,'knowledge.wiki/neutron-engine/index.html'),'utf8');
+const wikiHome=fs.readFileSync(path.join(dist,'knowledge.wiki/index.html'),'utf8');
+if (!wikiHome.includes(`href="${basePath}/knowledge.wiki/technologies/"`) || !wikiTechnologies.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !wikiEngine.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !wikiPluto.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !index.some(entry=>entry.path==='/knowledge.wiki/neutron-engine/')) throw new Error('Technology section, engine article, or crosslinks are missing');
 const olympic=fs.readFileSync(path.join(dist,'olympic.ship/index.html'),'utf8');
 for (const phrase of ['Дорога','Прайм','Гиперион','Сатурн','Невесомость','Марс','Сиама','Три президентских пентхауса','Дженна Реджис']) {
   if (!olympic.toLowerCase().includes(phrase.toLowerCase())) throw new Error(`Olympic landing is missing: ${phrase}`);
