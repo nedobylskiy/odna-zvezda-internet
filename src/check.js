@@ -37,7 +37,10 @@ if (!wikiEarth.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !wikiPlut
 const wikiTechnologies=fs.readFileSync(path.join(dist,'knowledge.wiki/technologies/index.html'),'utf8');
 const wikiEngine=fs.readFileSync(path.join(dist,'knowledge.wiki/neutron-engine/index.html'),'utf8');
 const wikiHome=fs.readFileSync(path.join(dist,'knowledge.wiki/index.html'),'utf8');
-if (!wikiHome.includes(`href="${basePath}/knowledge.wiki/technologies/"`) || !wikiTechnologies.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !wikiEngine.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !wikiPluto.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !index.some(entry=>entry.path==='/knowledge.wiki/neutron-engine/')) throw new Error('Technology section, engine article, or crosslinks are missing');
+if (!wikiHome.includes(`href="${basePath}/knowledge.wiki/technologies/"`) || wikiHome.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !wikiTechnologies.includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`) || !wikiEngine.includes(`href="${basePath}/knowledge.wiki/pluto/"`) || !index.some(entry=>entry.path==='/knowledge.wiki/neutron-engine/')) throw new Error('Technology section, engine article, or crosslinks are missing');
+for (const html of [wikiHome,wikiTechnologies,wikiEngine,wikiPluto,wikiEarth]) {
+  if (html.match(/<nav aria-label="Разделы сайта">[\s\S]*?<\/nav>/)?.[0].includes(`href="${basePath}/knowledge.wiki/neutron-engine/"`)) throw new Error('Engine must not be listed in top navigation');
+}
 const olympic=fs.readFileSync(path.join(dist,'olympic.ship/index.html'),'utf8');
 for (const phrase of ['Дорога','Прайм','Гиперион','Сатурн','Невесомость','Марс','Сиама','Три президентских пентхауса','Дженна Реджис']) {
   if (!olympic.toLowerCase().includes(phrase.toLowerCase())) throw new Error(`Olympic landing is missing: ${phrase}`);

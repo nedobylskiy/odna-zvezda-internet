@@ -24,7 +24,7 @@ Workflow `.github/workflows/pages.yml` собирает `dist` и публику
 
 Для сайтов со своей структурой лендинга можно добавить отдельный рендерер: Olympic находится в `src/render-olympic.js`, его стили — в `assets/olympic.css`. Верхняя служебная ссылка ведёт обратно в общий поиск.
 
-Статьи `/knowledge.wiki/earth/`, `/knowledge.wiki/pluto/` и `/knowledge.wiki/neutron-engine/` используют подразделы из канона `odna-zvezda-universe`: данные находятся в `src/microsites.js`, оглавление и заголовки создаёт `src/render-microsite.js`, оформление — `assets/wiki-article.css`. Раздел `/knowledge.wiki/technologies/` собирает ссылки на технологические статьи. Земля ссылается на Плутонский спор, а статья Плутона и статья о двигателе связаны между собой.
+Статьи `/knowledge.wiki/earth/`, `/knowledge.wiki/pluto/` и `/knowledge.wiki/neutron-engine/` используют подразделы из канона `odna-zvezda-universe`: данные находятся в `src/microsites.js`, оглавление и заголовки создаёт `src/render-microsite.js`, оформление — `assets/wiki-article.css`. Раздел `/knowledge.wiki/technologies/` собирает ссылки на технологические статьи; двигатель доступен через него и не занимает пункт в общем меню энциклопедии. Земля ссылается на Плутонский спор, а статья двигателя — на Плутон.
 
 Официальный портал Земли находится в `src/render-earth.js`, его стили и счётчик — в `assets/earth.css` и `assets/earth.js`. Новости с зоной `earth` в `src/content.json` выводятся на главной `/portal.ue/` и получают отдельные страницы в `/portal.ue/news/`.
 
