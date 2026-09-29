@@ -1,0 +1,1 @@
+{"name":"odna-zvezda-internet","private":true,"type":"module","scripts":{"build":"node src/build.js","check":"node src/check.js"}}
