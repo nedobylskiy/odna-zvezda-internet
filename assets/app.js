@@ -22,32 +22,68 @@ function setView(next) {
 }
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
 
-const index = [
-  ['knowledge','knowledge.wiki','space','Энциклопедия Солнечной системы','Места, люди, корабли и события освоенной Солнечной системы. Точка входа для тех, кто впервые оказался в Сети Одной звезды.'],
-  ['ue','portal.ue','earth','Объединённая Земля','Точка доступа к земным сообщениям, службам и публичным данным Объединённой Земли.'],
-  ['mars','red.mars','mars','Марсианская лента','Новости куполов, маршруты между поселениями и повседневная жизнь Красной планеты.'],
-  ['oai','directory.oai','mars','Каталог куполов O-AI','Адреса и навигация по локальному сегменту куполов O-AI.'],
-  ['prime','thechurch.prime','prime','Церковь Прайма','Паломничество, община и публичные сообщения Церкви Прайма.'],
-  ['shrine','pilgrimage.light','prime','Паломничество к месту посадки Apollo 11','Место посадки Apollo 11 и святыня Apollo 11 Shrine в традиции Прайма.'],
-  ['moon','archive.moon','moon','Лунный архив','Лунные места, архивы экспедиций и память о первых полётах.'],
-  ['phobos','relay.phobos','phobos','Ретранслятор Фобоса','Узел связи и навигации у марсианской орбиты.'],
-  ['hyperion','market.hyp','space','Рынок Гипериона','Объявления, слухи и торговые предложения независимого Гипериона.'],
-  ['olympic','olympic.ship','space','Бортовой журнал Olympic','Публичная карточка корабля Olympic и ссылки на его маршрут в мире Одной звезды.']
-];
+let index = [];
+const normalize = value => String(value).toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
+const siteURL = site => typeof site==='string' ? `${base}sites/${encodeURIComponent(site)}/` : `${base}${site.path.replace(/^\//,'')}`;
+function matches(query) {
+  const terms = normalize(query).split(/\s+/).filter(Boolean);
+  return index.map(site => {
+    const fields = [site.domain,site.title,site.description,zoneNames[site.zone]].map(normalize);
+    if (terms.length && !terms.every(term=>fields.some(field=>field.includes(term)))) return {site,score:0};
+    const score = terms.length ? terms.reduce((sum,term)=>sum+
+      (fields[1].startsWith(term)?30:0)+(fields[0].startsWith(term)?24:0)+
+      (fields[1].includes(term)?12:0)+(fields[0].includes(term)?10:0)+
+      (fields[2].includes(term)?3:0)+(fields[3].includes(term)?2:0),0) : 1;
+    return {site,score:score+(site.zone===view?8:0)};
+  }).filter(item=>item.score).sort((a,b)=>b.score-a.score || a.site.title.localeCompare(b.site.title,'ru')).map(item=>item.site);
+}
 function renderSearch() {
-  const list = document.querySelector('#results'); if (!list) return;
+  const list = document.querySelector('#results'); if (!list || !index.length) return;
   const q = (new URLSearchParams(location.search).get('q') || '').trim();
-  const input = document.querySelector('#query'); if (input) input.value = q;
-  const terms = q.toLocaleLowerCase('ru').split(/\s+/).filter(Boolean);
-  const zoneScore = z => z===view ? 8 : (view==='mars' && z==='phobos') || (view==='earth' && z==='moon') || (view==='prime' && z==='moon') ? 3 : 0;
-  const scored = index.map(s=>{
-    const [slug,domain,zone,title,description]=s;
-    const text=`${domain} ${title} ${description} ${zoneNames[zone]}`.toLocaleLowerCase('ru');
-    const match=terms.length ? terms.reduce((sum,t)=>sum+(domain.toLowerCase().includes(t)?20:0)+(title.toLocaleLowerCase('ru').includes(t)?12:0)+(description.toLocaleLowerCase('ru').includes(t)?3:0)+(zoneNames[zone].toLocaleLowerCase('ru').includes(t)?2:0),0) : 1;
-    return {s, score: match ? match+zoneScore(zone) : 0, slug};
-  }).filter(x=>x.score).sort((a,b)=>b.score-a.score || a.s[1].localeCompare(b.s[1]));
+  const input = document.querySelector('#query'); if (input && document.activeElement!==input) input.value = q;
+  const scored = matches(q);
   const status = document.querySelector('#search-status');
   if (status) status.textContent=q ? `По запросу «${q}» найдено: ${scored.length} · приоритет: ${zoneNames[view]}` : `Все узлы публичного индекса · приоритет: ${zoneNames[view]}`;
-  list.innerHTML=scored.length ? scored.map(({s})=>`<article class="result"><a class="domain" href="${base}sites/${s[0]}/">${escape(s[1])} <span>↗</span></a><h3><a href="${base}sites/${s[0]}/">${escape(s[3])}</a></h3><p>${escape(s[4])}</p><span class="result-zone">${escape(zoneNames[s[2]])}</span></article>`).join('') : '<div class="empty">В открытом индексе ничего не найдено. Попробуйте название планеты, корабля или домен.</div>';
+  list.innerHTML=scored.length ? scored.map(site=>`<article class="result"><a class="domain" href="${siteURL(site)}">${escape(site.domain)} <span>↗</span></a><h3><a href="${siteURL(site)}">${escape(site.title)}</a></h3><p>${escape(site.description)}</p><span class="result-zone">${escape(zoneNames[site.zone])}</span></article>`).join('') : '<div class="empty">В открытом индексе ничего не найдено. Попробуйте название планеты, корабля или домен.</div>';
+}
+function setupSuggestions(form) {
+  const input=form.querySelector('input[name=q]');
+  const wrap=document.createElement('div'); wrap.className='search-wrap';
+  form.parentNode.insertBefore(wrap,form); wrap.appendChild(form);
+  const panel=document.createElement('div'); panel.className='suggestions'; panel.id='search-suggestions';
+  panel.setAttribute('role','listbox'); panel.hidden=true; wrap.appendChild(panel);
+  input.setAttribute('aria-controls',panel.id);
+  input.setAttribute('aria-autocomplete','list');
+  input.setAttribute('aria-expanded','false');
+  let found=[], selected=-1;
+  const hide=()=>{panel.hidden=true;selected=-1;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+  function update() {
+    const query=input.value.trim(); found=query?matches(query).slice(0,6):[]; selected=-1;
+    if (!found.length) {hide();return;}
+    panel.innerHTML=`<div class="suggestions-label">НАЙДЕНО В СЕТИ</div>${found.map((site,i)=>`<a id="suggestion-${i}" role="option" aria-selected="false" href="${siteURL(site)}"><span class="suggestion-icon">${site.tag.includes('wiki')?'◈':'↗'}</span><span class="suggestion-text"><strong>${escape(site.title)}</strong><small>${escape(site.domain)}</small></span><span class="suggestion-zone">${escape(zoneNames[site.zone])}</span></a>`).join('')}<a class="suggestions-all" href="${base}search/?q=${encodeURIComponent(query)}">Все результаты для «${escape(query)}» →</a>`;
+    panel.hidden=false;input.setAttribute('aria-expanded','true');
+  }
+  input.addEventListener('input',update);
+  input.addEventListener('focus',update);
+  input.addEventListener('keydown',event=>{
+    if (event.key==='Escape') {hide();return;}
+    if (panel.hidden) return;
+    if (event.key==='ArrowDown'||event.key==='ArrowUp') {
+      event.preventDefault();
+      selected=event.key==='ArrowDown'?Math.min(selected+1,found.length-1):Math.max(selected-1,-1);
+      panel.querySelectorAll('[role=option]').forEach((option,i)=>{option.classList.toggle('selected',i===selected);option.setAttribute('aria-selected',String(i===selected));});
+      if (selected>=0) input.setAttribute('aria-activedescendant',`suggestion-${selected}`);
+      else input.removeAttribute('aria-activedescendant');
+    } else if (event.key==='Enter'&&selected>=0) {event.preventDefault();location.href=siteURL(found[selected]);}
+  });
+  document.addEventListener('pointerdown',event=>{if (!wrap.contains(event.target)) hide();});
 }
 setView(view);
+fetch(`${base}assets/search-index.json`).then(response=>{
+  if (!response.ok) throw new Error('Search index unavailable');
+  return response.json();
+}).then(sites=>{
+  index=sites;
+  renderSearch();
+  document.querySelectorAll('.search-form').forEach(setupSuggestions);
+}).catch(error=>console.error(error));

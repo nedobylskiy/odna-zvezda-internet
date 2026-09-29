@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { microsites } from './microsites.js';
+import { renderMicrosite } from './render-microsite.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root, 'src/content.json'), 'utf8'));
@@ -13,7 +15,8 @@ const prefix = basePath.replace(/\/$/, '');
 const url = p => `${prefix}${p}`;
 const absolute = p => `${origin}${url(p)}`;
 const bySlug = Object.fromEntries(sites.map(s => [s.slug, s]));
-const link = s => url(`/sites/${s.slug}/`);
+const routeFor = s => s.slug.startsWith('wiki-') ? `/sites/knowledge/${s.slug.slice(5)}/` : `/sites/${s.slug}/`;
+const link = s => url(routeFor(s));
 const zoneName = { earth:'Земля', mars:'Марс', prime:'Прайм', space:'Открытый космос', moon:'Луна', phobos:'Фобос' };
 const glyph = {earth:'◉',mars:'●',prime:'✝',space:'✦'};
 const write = (name, html) => { const target=path.join(out,name); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.writeFileSync(target,html); };
@@ -34,18 +37,28 @@ const zones = [ ['earth','Земля','.ue · .earth · .blue'],['mars','Мар�
 const directoryBody = `<main class="inner-page"><div class="eyebrow">КАРТА СЕТИ / ПУБЛИЧНЫЕ АДРЕСА</div><h1>Каталог доменов</h1><p class="lead">Вымышленные домены работают как адреса внутри истории. Здесь у каждого узла есть постоянная страница, доступная в обычном интернете.</p><div class="directory-grid">${zones.map(([zone,name,tlds])=>`<section class="zone-card"><div class="zone-card-top"><span>${esc(name)}</span><span>↗</span></div><div class="tlds">${esc(tlds)}</div><div class="zone-links">${sites.filter(s=>s.zone===zone).map(s=>`<a href="${link(s)}">${esc(s.domain)} <span>↗</span></a>`).join('') || '<span class="muted">Ожидает первых сайтов</span>'}</div></section>`).join('')}</div><p class="directory-note">Зоны задают местонахождение и характер ресурса, но не ограничивают доступ. Поиск видит всю открытую Сеть и меняет порядок результатов в зависимости от выбранной точки обзора.</p></main>`;
 write('directory/index.html',shell({title:'Каталог доменов',description:'Зоны и сайты вымышленной Сети Одной звезды: Земля, Марс, Прайм, Луна, Фобос и независимые узлы.',route:'/directory/',body:directoryBody}));
 
-for (const s of sites) {
-  const related = s.links.map(slug=>bySlug[slug]).filter(Boolean);
-  const body = `<main class="inner-page site-page"><div class="breadcrumb"><a href="${url('/directory/')}">Каталог</a><span>/</span>${esc(zoneName[s.zone])}<span>/</span>${esc(s.domain)}</div><div class="site-mast"><div><div class="eyebrow">${esc(s.tag)}</div><h1>${esc(s.title)}</h1><p class="lead">${esc(s.description)}</p></div><div class="domain-badge"><small>АДРЕС В СЕТИ</small><strong>${esc(s.domain)}</strong><span>ПУБЛИЧНЫЙ УЗЕЛ ●</span></div></div><div class="article-layout"><article class="article-content">${s.body.map(p=>`<p>${esc(p)}</p>`).join('')}</article><aside class="related"><span class="eyebrow">СВЯЗАННЫЕ УЗЛЫ</span>${related.map(r=>`<a href="${link(r)}"><span>${esc(r.title)}</span><small>${esc(r.domain)} ↗</small></a>`).join('')}</aside></div></main>`;
-  write(`sites/${s.slug}/index.html`,shell({title:s.title,description:s.description,route:`/sites/${s.slug}/`,body}));
+for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
+  const model=microsites[s.slug];
+  if (!model) throw new Error(`Missing microsite model: ${s.slug}`);
+  const helpers={url,absolute,link,bySlug,esc};
+  write(`sites/${s.slug}/index.html`,renderMicrosite(s,model,null,helpers));
+  for (const page of model.pages) write(`sites/${s.slug}/${page.slug}/index.html`,renderMicrosite(s,model,page,helpers));
 }
 const aboutBody = `<main class="inner-page"><div class="eyebrow">О ПРОЕКТЕ</div><h1>Интернет одной звезды</h1><p class="lead">Художественный сетевой слой вселенной «Одна звезда»: страницы, новости и поисковая система, увиденные глазами жителей разных уголков Солнечной системы.</p><div class="article-content"><p>Адреса вроде knowledge.wiki и thechurch.prime существуют внутри вымышленной Сети. В браузере они открываются по настоящим адресам этого сайта. Вы можете читать страницы напрямую, переходить по ссылкам и находить их через обычные поисковики.</p><p>Материалы портала — художественный вымысел. Стартовые записи служат каркасом для будущих историй и могут уточняться по мере развития вселенной.</p><p><a href="${url('/directory/')}">Открыть каталог сети ↗</a></p></div></main>`;
 write('about/index.html',shell({title:'О проекте',description:'Как устроена вымышленная Сеть Одной звезды и её каталог доменов.',route:'/about/',body:aboutBody}));
 
-const allRoutes = ['/', '/search/', '/directory/', '/about/', ...sites.map(s=>`/sites/${s.slug}/`)];
+const searchEntries=[...sites.map(({slug,domain,zone,title,description,tag})=>({slug,path:routeFor({slug}),domain,zone,title,description,tag}))];
+for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
+  for (const page of microsites[s.slug].pages) {
+    if (s.slug==='knowledge' && ['earth','mars','prime'].includes(page.slug)) continue;
+    searchEntries.push({slug:`${s.slug}/${page.slug}`,path:`/sites/${s.slug}/${page.slug}/`,domain:`${s.domain}/${page.slug}`,zone:s.zone,title:`${page.title} — ${s.title}`,description:page.subtitle,tag:`${s.domain} · раздел`});
+  }
+}
+write('assets/search-index.json',JSON.stringify(searchEntries));
+const allRoutes=['/','/search/','/directory/','/about/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...Object.entries(microsites).flatMap(([slug,model])=>model.pages.map(page=>`/sites/${slug}/${page.slug}/`))];
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allRoutes.map(p=>`<url><loc>${absolute(p)}</loc></url>`).join('')}</urlset>`);
 write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
-for (const asset of ['style.css','app.js','favicon.svg']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
+for (const asset of ['style.css','app.js','favicon.svg','microsites.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
 console.log(`Built ${allRoutes.length} pages in dist/`);
