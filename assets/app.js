@@ -16,7 +16,7 @@ function setView(next) {
   const heading = document.querySelector('#news-heading'), items = document.querySelector('#news-items');
   if (heading && items) {
     heading.textContent = ({earth:'Земная лента',mars:'Марсианская лента',prime:'Лента Прайма',space:'Межпланетная лента'})[next];
-    items.innerHTML = news[next].map(([title,slug],i)=>`<a class="news-item" href="${base}sites/${slug}/"><span class="news-number">0${i+1}</span><span>${escape(title)}</span><span class="arrow">↗</span></a>`).join('');
+    items.innerHTML = news[next].map(([title,slug],i)=>`<a class="news-item" href="${siteURL(slug)}"><span class="news-number">0${i+1}</span><span>${escape(title)}</span><span class="arrow">↗</span></a>`).join('');
   }
   renderSearch();
 }
@@ -24,7 +24,10 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
 
 let index = [];
 const normalize = value => String(value).toLocaleLowerCase('ru').replace(/ё/g,'е').trim();
-const siteURL = site => typeof site==='string' ? `${base}sites/${encodeURIComponent(site)}/` : `${base}${site.path.replace(/^\//,'')}`;
+const siteURL = site => {
+  const entry=typeof site==='string'?index.find(item=>item.slug===site):site;
+  return entry ? `${base}${entry.path.replace(/^\//,'')}` : `${base}search/`;
+};
 function matches(query) {
   const terms = normalize(query).split(/\s+/).filter(Boolean);
   return index.map(site => {
@@ -86,4 +89,5 @@ fetch(`${base}assets/search-index.json`).then(response=>{
   index=sites;
   renderSearch();
   document.querySelectorAll('.search-form').forEach(setupSuggestions);
+  setView(view);
 }).catch(error=>console.error(error));

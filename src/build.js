@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { microsites } from './microsites.js';
 import { renderMicrosite } from './render-microsite.js';
 import { renderOlympic } from './render-olympic.js';
+import { renderEarth } from './render-earth.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root, 'src/content.json'), 'utf8'));
@@ -16,7 +17,7 @@ const prefix = basePath.replace(/\/$/, '');
 const url = p => `${prefix}${p}`;
 const absolute = p => `${origin}${url(p)}`;
 const bySlug = Object.fromEntries(sites.map(s => [s.slug, s]));
-const routeFor = s => s.slug.startsWith('wiki-') ? `/sites/knowledge/${s.slug.slice(5)}/` : `/sites/${s.slug}/`;
+const routeFor = s => `/${s.domain}/`;
 const link = s => url(routeFor(s));
 const zoneName = { earth:'Земля', mars:'Марс', prime:'Прайм', space:'Открытый космос', moon:'Луна', phobos:'Фобос' };
 const glyph = {earth:'◉',mars:'●',prime:'✝',space:'✦'};
@@ -42,25 +43,36 @@ for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
   const model=microsites[s.slug];
   if (!model) throw new Error(`Missing microsite model: ${s.slug}`);
   const helpers={url,absolute,link,bySlug,esc};
-  const render=s.slug==='olympic'?renderOlympic:renderMicrosite;
-  write(`sites/${s.slug}/index.html`,render(s,model,null,helpers));
-  for (const page of model.pages) write(`sites/${s.slug}/${page.slug}/index.html`,render(s,model,page,helpers));
+  const render=s.slug==='olympic'?renderOlympic:s.slug==='ue'?(site,model,page,helpers)=>renderEarth(site,model,page,helpers,news.find(n=>n.zone==='earth').items):renderMicrosite;
+  write(`${s.domain}/index.html`,render(s,model,null,helpers));
+  for (const page of model.pages) write(`${s.domain}/${page.slug}/index.html`,render(s,model,page,helpers));
 }
+const earthNews=news.find(n=>n.zone==='earth').items;
+for (const story of earthNews) write(`portal.ue/news/${story.slug}/index.html`,renderEarth(bySlug.ue,microsites.ue,null,{url,absolute,esc},earthNews,story));
+// Preserve previously shared /sites/... URLs while canonical pages move into domain folders.
+const redirect = (oldPath,newPath) => write(`${oldPath}/index.html`,
+  `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=${url(newPath)}"><link rel="canonical" href="${absolute(newPath)}"><title>Адрес изменён</title></head><body><p>Страница переехала: <a href="${url(newPath)}">${esc(newPath)}</a></p></body></html>`);
+for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
+  redirect(`sites/${s.slug}`,routeFor(s));
+  for (const page of microsites[s.slug].pages) redirect(`sites/${s.slug}/${page.slug}`,`/${s.domain}/${page.slug}/`);
+}
+for (const s of sites.filter(s=>s.slug.startsWith('wiki-'))) redirect(`sites/knowledge/${s.slug.slice(5)}`,routeFor(s));
 const aboutBody = `<main class="inner-page"><div class="eyebrow">О ПРОЕКТЕ</div><h1>Интернет одной звезды</h1><p class="lead">Художественный сетевой слой вселенной «Одна звезда»: страницы, новости и поисковая система, увиденные глазами жителей разных уголков Солнечной системы.</p><div class="article-content"><p>Адреса вроде knowledge.wiki и thechurch.prime существуют внутри вымышленной Сети. В браузере они открываются по настоящим адресам этого сайта. Вы можете читать страницы напрямую, переходить по ссылкам и находить их через обычные поисковики.</p><p>Материалы портала — художественный вымысел. Стартовые записи служат каркасом для будущих историй и могут уточняться по мере развития вселенной.</p><p><a href="${url('/directory/')}">Открыть каталог сети ↗</a></p></div></main>`;
 write('about/index.html',shell({title:'О проекте',description:'Как устроена вымышленная Сеть Одной звезды и её каталог доменов.',route:'/about/',body:aboutBody}));
 
-const searchEntries=[...sites.map(({slug,domain,zone,title,description,tag})=>({slug,path:routeFor({slug}),domain,zone,title,description,tag}))];
+const searchEntries=[...sites.map(({slug,domain,zone,title,description,tag})=>({slug,path:routeFor({domain}),domain,zone,title,description,tag}))];
 for (const s of sites.filter(s=>!s.slug.startsWith('wiki-'))) {
   for (const page of microsites[s.slug].pages) {
     if (s.slug==='knowledge' && ['earth','mars','prime'].includes(page.slug)) continue;
-    searchEntries.push({slug:`${s.slug}/${page.slug}`,path:`/sites/${s.slug}/${page.slug}/`,domain:`${s.domain}/${page.slug}`,zone:s.zone,title:`${page.title} — ${s.title}`,description:page.subtitle,tag:`${s.domain} · раздел`});
+    searchEntries.push({slug:`${s.slug}/${page.slug}`,path:`/${s.domain}/${page.slug}/`,domain:`${s.domain}/${page.slug}`,zone:s.zone,title:`${page.title} — ${s.title}`,description:page.subtitle,tag:`${s.domain} · раздел`});
   }
 }
+for (const story of earthNews) searchEntries.push({slug:`ue/news/${story.slug}`,path:`/portal.ue/news/${story.slug}/`,domain:`portal.ue/news/${story.slug}`,zone:'earth',title:story.title,description:story.summary,tag:'Земля · новости'});
 write('assets/search-index.json',JSON.stringify(searchEntries));
-const allRoutes=['/','/search/','/directory/','/about/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...Object.entries(microsites).flatMap(([slug,model])=>model.pages.map(page=>`/sites/${slug}/${page.slug}/`))];
+const allRoutes=['/','/search/','/directory/','/about/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`/${s.domain}/${page.slug}/`)),...earthNews.map(story=>`/portal.ue/news/${story.slug}/`)];
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allRoutes.map(p=>`<url><loc>${absolute(p)}</loc></url>`).join('')}</urlset>`);
 write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
-for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
+for (const asset of ['style.css','app.js','favicon.svg','microsites.css','olympic.css','earth.css','earth.js']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));
 console.log(`Built ${allRoutes.length} pages in dist/`);
