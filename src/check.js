@@ -8,7 +8,7 @@ const dist = path.join(root,'dist');
 const { sites, news } = JSON.parse(fs.readFileSync(path.join(root,'src/content.json'),'utf8'));
 const { origin, basePath } = JSON.parse(fs.readFileSync(path.join(root,'src/config.json'),'utf8'));
 const earthNews=news.find(n=>n.zone==='earth').items;
-const pages = ['index.html','search/index.html','directory/index.html','about/index.html',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(s=>`${s.domain}/index.html`),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`${s.domain}/${page.slug}/index.html`)),...earthNews.map(story=>`portal.ue/news/${story.slug}/index.html`),...forumCategories.flatMap(category=>category.topics.map(topic=>`warandlove.venus/${category.slug}/${topic.slug}/index.html`))];
+const pages = ['index.html','search/index.html','directory/index.html','about/index.html','contribute/index.html',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(s=>`${s.domain}/index.html`),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`${s.domain}/${page.slug}/index.html`)),...earthNews.map(story=>`portal.ue/news/${story.slug}/index.html`),...forumCategories.flatMap(category=>category.topics.map(topic=>`warandlove.venus/${category.slug}/${topic.slug}/index.html`))];
 for (const page of pages) {
   const html=fs.readFileSync(path.join(dist,page),'utf8');
   if (!/<h1(?:\s|>)/.test(html) || !html.includes('rel="canonical"') || !html.includes('name="description"')) throw new Error(`Missing semantic metadata: ${page}`);
