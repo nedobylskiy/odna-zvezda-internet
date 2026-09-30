@@ -89,7 +89,49 @@ for (const category of forumCategories) for (const topic of category.topics) sea
 write('assets/search-index.json',JSON.stringify(searchEntries));
 const allRoutes=['/','/search/','/directory/','/about/','/contribute/',...sites.filter(s=>!s.slug.startsWith('wiki-')).map(routeFor),...sites.filter(s=>!s.slug.startsWith('wiki-')).flatMap(s=>microsites[s.slug].pages.map(page=>`/${s.domain}/${page.slug}/`)),...earthNews.map(story=>`/portal.ue/news/${story.slug}/`),...forumCategories.flatMap(category=>category.topics.map(topic=>`/warandlove.venus/${category.slug}/${topic.slug}/`))];
 write('sitemap.xml',`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${allRoutes.map(p=>`<url><loc>${absolute(p)}</loc></url>`).join('')}</urlset>`);
-write('robots.txt',`User-agent: *\nAllow: /\nSitemap: ${absolute('/sitemap.xml')}\n`);
+write('robots.txt',`# Open access for all search and AI crawlers.\nUser-agent: *\nAllow: /\n\nSitemap: ${absolute('/sitemap.xml')}\n`);
+const mdLabel = value => String(value).replaceAll('[','\\[').replaceAll(']','\\]');
+const llmLink = (title, route, note='') => `- [${mdLabel(title)}](${absolute(route)})${note?`: ${note}`:''}`;
+const wiki=microsites.knowledge.pages;
+const llms=[
+  '# Сеть Одной звезды',
+  '',
+  '> Статический интернет вымышленной Солнечной системы из книжной вселенной «Одна звезда» Андрея Недобыльского. Адреса внутри сайта вроде knowledge.wiki и portal.ue — художественные домены, расположенные по путям этого сайта.',
+  '',
+  'Все перечисленные ниже страницы открыты для обхода. Основной текст находится в статическом HTML и доступен без JavaScript. Карта сайта перечисляет все индексируемые страницы; старые перенаправления и временно недоступные страницы форума в неё не входят.',
+  '',
+  '## Начало и карта сайта',
+  llmLink('Поиск по Сети','/','Главная с точкой обзора Земли, Марса, Прайма или открытого космоса.'),
+  llmLink('Каталог доменов','/directory/','Сайты и зоны вымышленного интернета.'),
+  llmLink('Поиск по индексу','/search/','Клиентский поиск; отдельные результаты доступны по постоянным адресам ниже.'),
+  llmLink('О проекте','/about/','Контекст книжной вселенной и ссылка на серию книг.'),
+  llmLink('Предложить сайт','/contribute/','Как добавить новый сайт через pull request.'),
+  llmLink('Полная XML карта сайта','/sitemap.xml','Все канонические индексируемые адреса.'),
+  '',
+  '## Энциклопедия Солнечной системы',
+  llmLink('knowledge.wiki','/knowledge.wiki/','Главная энциклопедии.'),
+  ...wiki.map(page=>llmLink(page.title,`/knowledge.wiki/${page.slug}/`,page.subtitle)),
+  '',
+  '## Сайты Сети',
+  ...sites.filter(site=>!site.slug.startsWith('wiki-') && site.slug!=='knowledge' && site.slug!=='forum').flatMap(site=>[
+    llmLink(site.title,`/${site.domain}/`,`${site.domain} — ${site.description}`),
+    ...microsites[site.slug].pages.map(page=>llmLink(`${site.domain} — ${page.title}`,`/${site.domain}/${page.slug}/`,page.subtitle))
+  ]),
+  '',
+  '## Новости Земли',
+  llmLink('Новости Земли','/portal.ue/news/','Открытый раздел официального портала.'),
+  ...earthNews.map(story=>llmLink(story.title,`/portal.ue/news/${story.slug}/`,story.summary)),
+  '',
+  '## Форум «Война и Любовь на Венере»',
+  llmLink('Форум','/warandlove.venus/','Архив обсуждений для чтения.'),
+  ...forumCategories.flatMap(category=>[
+    llmLink(category.title,`/warandlove.venus/${category.slug}/`,category.description),
+    ...category.topics.map(topic=>llmLink(topic.title,`/warandlove.venus/${category.slug}/${topic.slug}/`))
+  ]),
+  ''
+].join('\n');
+write('llms.txt',llms);
+write('llm.txt',llms);
 write('.nojekyll','');
 fs.mkdirSync(path.join(out,'assets'),{recursive:true});
 for (const asset of ['style.css','app.js','favicon.svg','microsites.css','wiki-article.css','olympic.css','earth.css','earth.js','earth-clock.js','mars-clock-v2.js','planet-clocks.css','forum.css']) fs.copyFileSync(path.join(root,'assets',asset),path.join(out,'assets',asset));

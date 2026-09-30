@@ -22,6 +22,13 @@ for (const page of pages) {
 const sitemap=fs.readFileSync(path.join(dist,'sitemap.xml'),'utf8');
 if ((sitemap.match(/<url>/g)||[]).length !== pages.length) throw new Error('Sitemap does not list all pages');
 if (!sitemap.includes(`${origin}${basePath}/`)) throw new Error('Sitemap uses the wrong origin');
+const robots=fs.readFileSync(path.join(dist,'robots.txt'),'utf8');
+const llms=fs.readFileSync(path.join(dist,'llms.txt'),'utf8');
+if (!/^User-agent: \*\nAllow: \/$/m.test(robots) || !robots.includes(`Sitemap: ${origin}${basePath}/sitemap.xml`)) throw new Error('Open crawler access or sitemap directive missing');
+if (fs.readFileSync(path.join(dist,'llm.txt'),'utf8')!==llms || !llms.startsWith('# Сеть Одной звезды\n')) throw new Error('LLM index and alias differ');
+for (const match of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
+  if (!llms.includes(`](${match[1]})`)) throw new Error(`LLM index omits ${match[1]}`);
+}
 const index=JSON.parse(fs.readFileSync(path.join(dist,'assets/search-index.json'),'utf8'));
 for (const entry of index) {
   if (!fs.existsSync(path.join(dist,entry.path.slice(1),'index.html'))) throw new Error(`Search result has no page: ${entry.domain}`);
